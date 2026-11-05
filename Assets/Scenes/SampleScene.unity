@@ -6053,6 +6053,9 @@ PrefabInstance:
       addedObject: {fileID: 777483832}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2d2baf9e37e36e045abf18859d4bb082, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 777483835}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2d2baf9e37e36e045abf18859d4bb082, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 777483827}
   m_SourcePrefab: {fileID: 100100000, guid: 2d2baf9e37e36e045abf18859d4bb082, type: 3}
 --- !u!4 &777483825 stripped
@@ -6094,7 +6097,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 777483826}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2d1937852ddd36f4aa38f8bee51b2621, type: 3}
   m_Name: 
@@ -6110,7 +6113,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 777483826}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a3988b670b30e942ba3242ebc8ba8ad, type: 3}
   m_Name: 
@@ -6132,6 +6135,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemiesHealth
   maxHealth: 10
   hitParticlesPrefab: {fileID: 0}
+--- !u!114 &777483835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 777483826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f175842a003b3894ba77f758d0c2d23a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlyingEnemy
+  detectionRange: 5
+  loseRange: 7
+  moveSpeed: 2
+  floatingHeight: 2.5
+  floatingDuration: 1
 --- !u!1001 &782467628
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16430,6 +16450,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2066119349427282279, guid: 2817aa523e36e2b4bbc8a86255c1f7e0, type: 3}
       propertyPath: m_Name
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066119349427282279, guid: 2817aa523e36e2b4bbc8a86255c1f7e0, type: 3}
+      propertyPath: m_TagString
       value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 2949448912409343947, guid: 2817aa523e36e2b4bbc8a86255c1f7e0, type: 3}
