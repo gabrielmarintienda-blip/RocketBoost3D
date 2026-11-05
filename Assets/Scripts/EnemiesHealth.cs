@@ -4,19 +4,19 @@ using UnityEngine;
 public class EnemiesHealth : MonoBehaviour
 {
     [Header("Health")]
-    [SerializeField] private int maxHealth = 100;
-    private int currentHealth;
+    [SerializeField] private EnemyData enemyData;
+    private float currentHealth;
 
     [Header("Hit Feedback")]
     [SerializeField] private ParticleSystem hitParticlesPrefab;
 
-    void Awake()
+    private void OnEnable()
     {
-        currentHealth = maxHealth;
+        currentHealth = enemyData.health;
     }
 
     // Called by the bullet when it hits the enemy
-    internal void TakeDamage(int damage, Vector3 hitPoint)
+    public void TakeDamage(float damage, Vector3 hitPoint)
     {
         currentHealth -= damage;
 
@@ -26,7 +26,7 @@ public class EnemiesHealth : MonoBehaviour
         // Destroy the enemy when its health reaches zero
         if (currentHealth <= 0)
         {
-            Destroy(gameObject);
+            gameObject.SetActive(false);
         }
     }
 

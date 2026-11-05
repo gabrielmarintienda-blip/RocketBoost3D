@@ -45,4 +45,12 @@ public class ObjectPool : MonoBehaviour
         theObject.SetActive(true);
         return theObject;
     }
+
+    public GameObject GetGameObjectFromPool(Vector3 position, Quaternion rotation)
+    {
+        GameObject theObject = GetGameObjectFromPool();
+        theObject.transform.position = position;
+        theObject.transform.rotation = rotation;
+        return theObject;
+    }
 }
