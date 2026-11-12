@@ -14,6 +14,10 @@ public class PlayerShooting : MonoBehaviour
     [SerializeField] private float bulletPerSecond = 0.25f;
     [SerializeField] public int bulletDamage = 10;
 
+    [Header("Charged Shot")]
+    [SerializeField] private float chargedBulletScale = 3f;
+    [SerializeField] private int chargedBulletDamage = 9999;
+
     private Transform shootingPoint;
     private ObjectPool objectPool;
     private float lastShotTime = 0f;
@@ -31,7 +35,11 @@ public class PlayerShooting : MonoBehaviour
     // Checks if enough time has passed since the last shot and if there is ammo (or infinite ammo)
     public bool CanShoot()
     {
-        return (Time.time - lastShotTime >= bulletPerSecond) && (InfiniteAmmoDuration || currentAmmo > 0);
+        bool cooldownReady = Time.time - lastShotTime >= bulletPerSecond;
+        bool hasAmmo = InfiniteAmmoDuration || currentAmmo > 0;
+        bool chargedReady = ScoreManager.Instance != null && ScoreManager.Instance.ChargedShotReady;
+
+        return cooldownReady && (hasAmmo || chargedReady);
     }
 
     /// <summary>
@@ -50,30 +58,37 @@ public class PlayerShooting : MonoBehaviour
     /// <summary>
     /// Shoots a bullet from the object pool if the player can shoot.
     /// </summary>
-    public void Shoot()
-    {
-        if (!CanShoot()) return;
-
-        // Get a bullet from the object pool
-        GameObject bullet = objectPool.GetGameObjectFromPool();
-        if (bullet == null) return; // Safety check, don't waste ammo if there is no bullet
-
-        // Update the last shot time and reduce ammo
-        lastShotTime = Time.time;
-        if (!InfiniteAmmoDuration)
+        public void Shoot()
         {
-            currentAmmo--;
-            UpdateAmmoUI();
+            if (!CanShoot()) return;
+
+            // Get a bullet from the object pool
+            GameObject bullet = objectPool.GetGameObjectFromPool();
+            if (bullet == null) return; // Safety check, don't waste ammo if there is no bullet
+
+            // Only consumed now that the shot really happens
+            bool charged = ScoreManager.Instance != null && ScoreManager.Instance.ConsumeChargedShot();
+
+            lastShotTime = Time.time;
+
+            // Charged shots are free: they don't spend ammo
+            if (!charged && !InfiniteAmmoDuration)
+            {
+                currentAmmo--;
+                UpdateAmmoUI();
+            }
+
+            bullet.transform.position = shootingPoint.position;
+            bullet.transform.rotation = shootingPoint.rotation;
+
+            BulletController bulletController = bullet.GetComponent<BulletController>();
+            bulletController.SetDamage(charged ? chargedBulletDamage : bulletDamage);
+            bulletController.SetCharged(charged, chargedBulletScale);
+
+            // Set the bullet's velocity to shoot it forward
+            Rigidbody bulletRigidbody = bullet.GetComponent<Rigidbody>();
+            bulletRigidbody.linearVelocity = shootingPoint.up * bulletSpeed;
         }
-
-        bullet.transform.position = shootingPoint.position;
-        bullet.transform.rotation = shootingPoint.rotation;
-        bullet.GetComponent<BulletController>().SetDamage(bulletDamage);
-
-        // Set the bullet's velocity to shoot it forward
-        Rigidbody bulletRigidbody = bullet.GetComponent<Rigidbody>();
-        bulletRigidbody.linearVelocity = shootingPoint.up * bulletSpeed;
-    }
 
     private void UpdateAmmoUI()
     {

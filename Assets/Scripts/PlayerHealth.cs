@@ -1,24 +1,32 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
-    [Header("Health")]
-    [SerializeField] private int health = 100;
-    public int currentHealth;
+    [Header("Lives")]
+    [SerializeField] private int maxLives = 3;
+    [SerializeField] private TextMeshProUGUI livesText;
+    public int currentLives;
 
     [Header("Hit Feedback")]
     [SerializeField] private Material hitMaterial;
     [SerializeField] private float hitColorDuration = 0.5f;
     [SerializeField] private float invincibilityDuration = 1f;
 
+    [Header("Death")]
+    [SerializeField] private DeathScreen deathScreen;
+
     private bool isInvincible;
+    private bool isDead;
     private Renderer[] renderers;
     private Material[] originalMaterials;
 
+    public bool IsDead => isDead;
+
     void Awake()
     {
-        currentHealth = health;
+        currentLives = maxLives;
 
         renderers = GetComponentsInChildren<Renderer>();
         originalMaterials = new Material[renderers.Length];
@@ -28,21 +36,48 @@ public class PlayerHealth : MonoBehaviour
             originalMaterials[i] = renderers[i].sharedMaterial;
     }
 
-    internal void TakeDamage(int damage)
+    void Start()
     {
-        if (isInvincible) return;
+        UpdateLivesUI();
+    }
 
-        currentHealth -= damage;
+    // Returns true only if the hit actually counted
+    // (the damage value is ignored: every hit costs one life)
+    internal bool TakeDamage(int damage)
+    {
+        if (isInvincible || isDead) return false;
 
-        if (currentHealth <= 0)
+        currentLives--;
+        UpdateLivesUI();
+
+        if (currentLives <= 0)
         {
+            isDead = true;
             Debug.Log("Muerto");
-
             GetComponent<PlayerMovement>().enabled = false;
-            return;
+
+            if (deathScreen != null) deathScreen.Show();
+            return true;
         }
 
         StartCoroutine(HitRoutine());
+        return true;
+    }
+
+    public bool AddLife(int amount = 1)
+    {
+        if (isDead) return false;                  // muerto: no se puede curar
+        if (currentLives >= maxLives) return false; // vidas completas: no se activa
+
+        currentLives = Mathf.Min(currentLives + amount, maxLives);
+        UpdateLivesUI();
+        return true;
+    }
+
+    private void UpdateLivesUI()
+    {
+        if (livesText != null)
+            livesText.text = "" + currentLives;
     }
 
     private IEnumerator HitRoutine()

@@ -18,6 +18,10 @@ public class EnemiesHealth : MonoBehaviour
     // Called by the bullet when it hits the enemy
     public void TakeDamage(float damage, Vector3 hitPoint)
     {
+        // Ignore hits on an enemy that is already dead (avoids counting a kill twice,
+        // which matters now that the charged bullet can pass through several colliders)
+        if (currentHealth <= 0) return;
+
         currentHealth -= damage;
 
         // Spawn hit particles at the impact point
@@ -26,6 +30,9 @@ public class EnemiesHealth : MonoBehaviour
         // Destroy the enemy when its health reaches zero
         if (currentHealth <= 0)
         {
+            if (ScoreManager.Instance != null)
+                ScoreManager.Instance.RegisterKill();
+
             gameObject.SetActive(false);
         }
     }

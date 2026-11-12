@@ -37,7 +37,10 @@ public class FlyingEnemy : MonoBehaviour
 
     void Update()
     {
-        if(playerTransform == null) return;
+    // Time stop: frozen enemies don't plan new movement
+    if (TimeStopManager.IsStopped) return;
+
+        if(playerTransform == null) return; 
 
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 

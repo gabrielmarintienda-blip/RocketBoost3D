@@ -46,11 +46,10 @@ public class ObjectPool : MonoBehaviour
         return theObject;
     }
 
-    public GameObject GetGameObjectFromPool(Vector3 position, Quaternion rotation)
+    public GameObject GetObjectFromPool(Vector3 position)
     {
         GameObject theObject = GetGameObjectFromPool();
         theObject.transform.position = position;
-        theObject.transform.rotation = rotation;
         return theObject;
     }
 }

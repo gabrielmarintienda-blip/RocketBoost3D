@@ -6,6 +6,14 @@ public class BulletController : MonoBehaviour
     [SerializeField] private float bulletLifeTime = 5f;
     private int damage = 10;
 
+    private Vector3 originalScale;
+    private bool isCharged;
+
+    void Awake()
+    {
+        originalScale = transform.localScale;
+    }
+
     void OnEnable()
     {
         // Deactivate the bullet after its lifetime expires
@@ -25,6 +33,14 @@ public class BulletController : MonoBehaviour
         damage = newDamage;
     }
 
+    // Called by PlayerShooting right after SetDamage.
+    // Always called, so a reused pooled bullet gets its normal size back.
+    public void SetCharged(bool charged, float scaleMultiplier)
+    {
+        isCharged = charged;
+        transform.localScale = charged ? originalScale * scaleMultiplier : originalScale;
+    }
+
     private void DeactivateBullet()
     {
         // Return the bullet to the pool
@@ -42,8 +58,9 @@ public class BulletController : MonoBehaviour
             enemyHealth.TakeDamage(damage, transform.position);
         }
 
-        // The bullet disappears on impact
-        DeactivateBullet();
+        // Normal bullets disappear on impact; the charged bullet goes through enemies
+        if (!isCharged)
+            DeactivateBullet();
     }
 
     void OnTriggerEnter(Collider other)
