@@ -30,7 +30,7 @@ Material:
     - _Radius: -1
     - _Reverse: 0
     m_Colors:
-    - _Center: {r: 0.6943291, g: 0.42928317, b: 0, a: 0}
+    - _Center: {r: 0.6306578, g: 0.42991212, b: 0, a: 0}
     - _RingColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

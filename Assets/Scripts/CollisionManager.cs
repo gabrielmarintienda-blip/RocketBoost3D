@@ -16,6 +16,7 @@ public class CollisionManager : MonoBehaviour
 
     AudioSource audioSource;
     PlayerHealth health;
+    PlayerMovement movement;
 
     bool isControllable = true;
 
@@ -23,6 +24,7 @@ public class CollisionManager : MonoBehaviour
     {
         audioSource = GetComponent<AudioSource>();
         health = GetComponent<PlayerHealth>();
+        movement = GetComponent<PlayerMovement>();
     }
 
     void OnCollisionEnter(Collision collision)
@@ -47,6 +49,23 @@ public class CollisionManager : MonoBehaviour
             case "Barrel":
                 BarrelCollision(collision.gameObject);
                 break;
+        }
+    }
+
+    // Out of fuel + touching anything except the landing pad = lose
+    void OnCollisionStay(Collision collision)
+    {
+        if (!isControllable || health.IsDead) return;
+
+        if (movement.IsOutOfFuel && !collision.gameObject.CompareTag("LandingPad"))
+        {
+            Debug.Log("Sin combustible");
+            isControllable = false;
+
+            audioSource.PlayOneShot(explosionAudio);
+            explosionParticles.Play();
+
+            health.Die();
         }
     }
 

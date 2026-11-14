@@ -18,6 +18,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float maxFuel = 100f;
     [SerializeField] private float fuelConsumptionPerSecond = 5f; // Fuel spent per second of thrust
     [SerializeField] private TextMeshProUGUI fuelText;
+    public bool IsOutOfFuel => fuel <= 0f;
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem thrustParticles;

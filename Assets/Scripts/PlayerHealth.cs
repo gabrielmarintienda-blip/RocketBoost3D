@@ -52,16 +52,27 @@ public class PlayerHealth : MonoBehaviour
 
         if (currentLives <= 0)
         {
-            isDead = true;
-            Debug.Log("Muerto");
-            GetComponent<PlayerMovement>().enabled = false;
-
-            if (deathScreen != null) deathScreen.Show();
+            Die();
             return true;
         }
 
         StartCoroutine(HitRoutine());
         return true;
+    }
+
+    // Instant death (e.g. out of fuel): ignores remaining lives and invincibility
+    public void Die()
+    {
+        if (isDead) return;
+
+        currentLives = 0;
+        UpdateLivesUI();
+
+        isDead = true;
+        Debug.Log("Muerto");
+        GetComponent<PlayerMovement>().enabled = false;
+
+        if (deathScreen != null) deathScreen.Show();
     }
 
     public bool AddLife(int amount = 1)

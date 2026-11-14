@@ -69,7 +69,7 @@ public class EnemySpawner : MonoBehaviour
             reservedPositions.Add(spawnPosition);
             GameObject enemy = group.enemyPool.GetObjectFromPool(spawnPosition);
             // Prefabs are authored at scale 1; in the level they spawn at 0.15.
-            enemy.transform.localScale = Vector3.one * 0.15f;
+           // enemy.transform.localScale = Vector3.one * 0.15f;
             ApplyTint(enemy, group.tint);
             yield return new WaitForSeconds(group.spawnInterval);
         }
