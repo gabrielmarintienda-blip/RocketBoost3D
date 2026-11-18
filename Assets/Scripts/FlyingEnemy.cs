@@ -13,8 +13,12 @@ public class FlyingEnemy : MonoBehaviour
     [SerializeField] private float floatingHeight = 1f;
     [SerializeField] private float floatingDuration = 2f;
 
+    [Header("Spawn Animation")]
+    [SerializeField] private float spawnGrowDuration = 0.5f;
+
     private Transform playerTransform;
     private Vector3 initialPosition;
+    private Vector3 baseScale;
     private Tween floatingTween;
 
     private enum EnemyState
@@ -26,28 +30,51 @@ public class FlyingEnemy : MonoBehaviour
 
     private EnemyState currentState = EnemyState.Idle;
 
-    private void Start()
+    private void Awake()
     {
-        playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
-        initialPosition = transform.position;
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null) playerTransform = player.transform;
 
-        // Start the floating animation
-    StartFloating();
+        // The prefab's scale, restored every time the enemy grows in
+        baseScale = transform.localScale;
+    }
+
+    // Called by the spawner right after taking the enemy from the pool.
+    // Needed because pooled enemies are reused and Start only runs once.
+    public void Spawn(Vector3 position)
+    {
+        // Clear anything left from the previous life
+        transform.DOKill();
+
+        transform.position = position;
+        initialPosition = position;
+        currentState = EnemyState.Idle;
+
+        StartFloating();
+
+        // Grow in instead of popping in
+        transform.localScale = Vector3.zero;
+        transform.DOScale(baseScale, spawnGrowDuration).SetEase(Ease.OutBack);
+    }
+
+    private void OnDisable()
+    {
+        // DOTween keeps running on inactive objects, so stop everything when the enemy dies
+        transform.DOKill();
     }
 
     void Update()
     {
-    // Time stop: frozen enemies don't plan new movement
-    if (TimeStopManager.IsStopped) return;
+        // Time stop: frozen enemies don't plan new movement
+        if (TimeStopManager.IsStopped) return;
 
-        if(playerTransform == null) return; 
+        if (playerTransform == null) return;
 
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
         if (distanceToPlayer <= detectionRange)
         {
             StartChasing(distanceToPlayer);
-
         }
         else if (currentState == EnemyState.Chasing && distanceToPlayer > loseRange)
         {
@@ -58,7 +85,7 @@ public class FlyingEnemy : MonoBehaviour
 
     private void StartChasing(float distanceToPlayer)
     {
-        currentState = EnemyState.Chasing;   
+        currentState = EnemyState.Chasing;
         floatingTween.Kill();
 
         float duration = Mathf.Max(0.1f, distanceToPlayer / moveSpeed);

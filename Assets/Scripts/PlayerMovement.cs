@@ -20,6 +20,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private TextMeshProUGUI fuelText;
     public bool IsOutOfFuel => fuel <= 0f;
 
+    [Header("Fuel HUD")]
+    [SerializeField] private RectTransform fuelBar;
+    private float fuelBarFullHeight;
+    private float fuelBarBottomY;
+
     [Header("Particles")]
     [SerializeField] private ParticleSystem thrustParticles;
     [SerializeField] private ParticleSystem leftthrustParticles;
@@ -44,7 +49,12 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         audioSource = GetComponent<AudioSource>();
         playerShooting = GetComponent<PlayerShooting>();
-
+        // Remember the bar's full size and where its bottom edge is
+        if (fuelBar != null)
+        {
+            fuelBarFullHeight = fuelBar.rect.height;
+            fuelBarBottomY = fuelBar.anchoredPosition.y - fuelBar.pivot.y * fuelBarFullHeight;
+        }
         // Never start with more fuel than the maximum
         fuel = Mathf.Min(fuel, maxFuel);
         UpdateFuelUI();
@@ -164,13 +174,29 @@ public class PlayerMovement : MonoBehaviour
         UpdateFuelUI();
         return true;
     }
-
     private void UpdateFuelUI()
     {
+        UpdateFuelBar();
+
         if (fuelText == null) return;
 
         // CeilToInt avoids showing decimals (and shows 1 until it is really 0)
         fuelText.text = "" + Mathf.CeilToInt(fuel) + " / " + Mathf.CeilToInt(maxFuel);
+    }
+
+    private void UpdateFuelBar()
+    {
+        if (fuelBar == null) return;
+
+        float fraction = maxFuel > 0f ? fuel / maxFuel : 0f;
+        float newHeight = fuelBarFullHeight * fraction;
+
+        fuelBar.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, newHeight);
+
+        // Keep the bottom edge fixed so the bar shrinks from the top down
+        Vector2 position = fuelBar.anchoredPosition;
+        position.y = fuelBarBottomY + fuelBar.pivot.y * newHeight;
+        fuelBar.anchoredPosition = position;
     }
 
     private void ProcessShooting()

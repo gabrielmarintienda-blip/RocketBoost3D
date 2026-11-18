@@ -8,6 +8,8 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private int maxLives = 3;
     [SerializeField] private TextMeshProUGUI livesText;
     public int currentLives;
+    [Header("Lives HUD")]
+[SerializeField] private GameObject[] faceStages; // Ordered from healthy to worst
 
     [Header("Hit Feedback")]
     [SerializeField] private Material hitMaterial;
@@ -89,8 +91,23 @@ public class PlayerHealth : MonoBehaviour
     {
         if (livesText != null)
             livesText.text = "" + currentLives;
+
+        UpdateFaceUI();
     }
 
+    private void UpdateFaceUI()
+    {
+        if (faceStages == null || faceStages.Length == 0) return;
+
+        // 0 = full lives, last = no lives (clamped if there are fewer faces than lives + 1)
+        int stage = Mathf.Clamp(maxLives - currentLives, 0, faceStages.Length - 1);
+
+        for (int i = 0; i < faceStages.Length; i++)
+        {
+            if (faceStages[i] != null)
+                faceStages[i].SetActive(i == stage);
+        }
+    }
     private IEnumerator HitRoutine()
     {
         isInvincible = true;

@@ -4,6 +4,8 @@ using UnityEngine.SceneManagement;
 public class CollisionManager : MonoBehaviour
 {
     [Header("Audio")]
+    [SerializeField] private AudioSource sfxSource;     // Solo efectos (explosión, aterrizaje). Nunca se llama a Stop() sobre él.
+    [SerializeField] private AudioSource engineSource;  // El del propulsor (el mismo que use PlayerMovement). Es el único que se para.
     [SerializeField] private AudioClip explosionAudio;
     [SerializeField] private AudioClip landingAudio;
 
@@ -14,7 +16,6 @@ public class CollisionManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private VictoryScreen victoryScreen;
 
-    AudioSource audioSource;
     PlayerHealth health;
     PlayerMovement movement;
 
@@ -22,9 +23,11 @@ public class CollisionManager : MonoBehaviour
 
     void Start()
     {
-        audioSource = GetComponent<AudioSource>();
         health = GetComponent<PlayerHealth>();
         movement = GetComponent<PlayerMovement>();
+
+        // Si no asignas sfxSource en el Inspector, intenta usar el AudioSource del objeto
+        if (sfxSource == null) sfxSource = GetComponent<AudioSource>();
     }
 
     void OnCollisionEnter(Collision collision)
@@ -62,7 +65,7 @@ public class CollisionManager : MonoBehaviour
             Debug.Log("Sin combustible");
             isControllable = false;
 
-            audioSource.PlayOneShot(explosionAudio);
+            PlayExplosionSound();
             explosionParticles.Play();
 
             health.Die();
@@ -74,8 +77,18 @@ public class CollisionManager : MonoBehaviour
     {
         if (!health.TakeDamage(1)) return; // invincible or dead: no sound, no particles
 
-        audioSource.PlayOneShot(explosionAudio);
+        PlayExplosionSound();
         explosionParticles.Play();
+    }
+
+    // Reproduce la explosión sin que se corte aunque el jugador se destruya o desactive
+    private void PlayExplosionSound()
+    {
+        if (explosionAudio == null) return;
+
+        // PlayClipAtPoint crea un objeto temporal, así el sonido sobrevive a Die()/Destroy
+        // (pierdes el control del mixer/volumen del AudioSource; si lo necesitas, usa sfxSource.PlayOneShot)
+        AudioSource.PlayClipAtPoint(explosionAudio, transform.position);
     }
 
     public void ExplosionCollision()
@@ -101,10 +114,13 @@ public class CollisionManager : MonoBehaviour
     {
         Debug.Log("LandingPad");
         isControllable = false;
-        audioSource.Stop();
-        audioSource.PlayOneShot(landingAudio);
+
+        // Solo se para el motor; los efectos que estén sonando no se tocan
+        if (engineSource != null) engineSource.Stop();
+
+        if (landingAudio != null) sfxSource.PlayOneShot(landingAudio);
         landingParticles.Play();
-        GetComponent<PlayerMovement>().enabled = false;
+        movement.enabled = false;
 
         if (victoryScreen != null) victoryScreen.Show();
     }

@@ -13,6 +13,7 @@ public class ScoreManager : MonoBehaviour
     [SerializeField] private int killsForChargedShot = 5;
     [SerializeField] private TextMeshProUGUI chargeText;
     [SerializeField] private AudioClip chargeReadySound;
+    [SerializeField] private GameObject[] killDiamonds; // Left to right
 
     public int Score { get; private set; }
     public bool ChargedShotReady { get; private set; }
@@ -72,5 +73,22 @@ public class ScoreManager : MonoBehaviour
             chargeText.text = ChargedShotReady
                 ? "¡DISPARO CARGADO LISTO!"
                 : "Carga: " + killsProgress + "/" + killsForChargedShot;
+
+        UpdateDiamonds();
+    }
+
+    private void UpdateDiamonds()
+    {
+        if (killDiamonds == null) return;
+
+        // While charging, one diamond per kill. When the shot is ready all of them stay lit
+        // (progress resets to 0 at that point), and they all hide once the shot is used.
+        int visible = ChargedShotReady ? killsForChargedShot : killsProgress;
+
+        for (int i = 0; i < killDiamonds.Length; i++)
+        {
+            if (killDiamonds[i] != null)
+                killDiamonds[i].SetActive(i < visible);
+        }
     }
 }

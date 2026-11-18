@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class VictoryScreen : MonoBehaviour
 {
@@ -10,20 +11,22 @@ public class VictoryScreen : MonoBehaviour
 
     [Header("Hide on victory")]
     [SerializeField] private GameObject hud;
-    [SerializeField] private AudioSource music;
-    [SerializeField] private float musicFadeTime = 1.5f;
+    [SerializeField] private float audioFadeTime = 1.5f;
 
     [Header("Buttons")]
-    [SerializeField] private GameObject nextLevelButton;
+    [SerializeField] private Button nextLevelButton;
+    [SerializeField] private Button menuButton;
 
     void Awake()
     {
+        nextLevelButton.onClick.AddListener(NextLevel);
+        menuButton.onClick.AddListener(GoToMenu);
         panel.SetActive(false);
     }
 
     public void Show()
     {
-        StartCoroutine(FadeOutMusic());
+        StartCoroutine(FadeOutAudio());
         StartCoroutine(ShowRoutine());
     }
 
@@ -35,42 +38,41 @@ public class VictoryScreen : MonoBehaviour
 
         // Hide the "next level" button if this is the last scene in the build
         bool hasNextLevel = SceneManager.GetActiveScene().buildIndex + 1 < SceneManager.sceneCountInBuildSettings;
-        if (nextLevelButton != null) nextLevelButton.SetActive(hasNextLevel);
+        nextLevelButton.gameObject.SetActive(hasNextLevel);
 
         panel.SetActive(true);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
-    private IEnumerator FadeOutMusic()
+    // Fades out ALL the sounds in the scene (music, effects, etc.)
+    private IEnumerator FadeOutAudio()
     {
-        if (music == null) yield break;
-
-        float startVolume = music.volume;
+        float startVolume = AudioListener.volume;
         float t = 0f;
 
-        while (t < musicFadeTime)
+        while (t < audioFadeTime)
         {
             t += Time.deltaTime;
-            music.volume = Mathf.Lerp(startVolume, 0f, t / musicFadeTime);
+            AudioListener.volume = Mathf.Lerp(startVolume, 0f, t / audioFadeTime);
             yield return null;
         }
 
-        music.Stop();
+        AudioListener.volume = 0f;
     }
 
-    // Hook this to the "Next level" button
-    public void NextLevel()
+    private void NextLevel()
     {
         Time.timeScale = 1f;
+        AudioListener.volume = 1f; // Bring the sound back
         CheckpointData.Clear(); // Don't spawn at an old level's checkpoint
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
     }
 
-    // Hook this to the "Menu" button
-    public void GoToMenu()
+    private void GoToMenu()
     {
         Time.timeScale = 1f;
+        AudioListener.volume = 1f; // Bring the sound back
         CheckpointData.Clear();
         SceneManager.LoadScene(menuSceneName);
     }

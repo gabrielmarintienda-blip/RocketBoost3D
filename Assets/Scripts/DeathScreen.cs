@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class DeathScreen : MonoBehaviour
 {
@@ -13,8 +14,14 @@ public class DeathScreen : MonoBehaviour
     [SerializeField] private AudioSource music;
     [SerializeField] private float musicFadeTime = 1.5f;
 
+    [Header("Buttons")]
+    [SerializeField] private Button retryButton;
+    [SerializeField] private Button menuButton;
+
     void Awake()
     {
+        retryButton.onClick.AddListener(Retry);
+        menuButton.onClick.AddListener(GoToMenu);
         panel.SetActive(false);
     }
 
@@ -52,15 +59,14 @@ public class DeathScreen : MonoBehaviour
         music.Stop();
     }
 
-    // Hook this to the Retry button
-    public void Retry()
+    // Reloads the current level (keeps the checkpoint, if any)
+    private void Retry()
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    // Hook this to the Menu button
-    public void GoToMenu()
+    private void GoToMenu()
     {
         Time.timeScale = 1f;
         CheckpointData.Clear();

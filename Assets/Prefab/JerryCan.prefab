@@ -92,7 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 527acf22393470b43bcb708f2857db4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuelPowerUp
-  fuelAmount: 25
+  fuelAmount: 100
 --- !u!65 &8843606321937005855
 BoxCollider:
   m_ObjectHideFlags: 0

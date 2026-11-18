@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Three enemy groups spawn from their pools once the ship passes startX.
-// The area is an XY ellipse: the same Z as the player, less height than width,
-// and a minimum height so they never spawn under the ground.
+// The area is an XY ellipse: the same Z as the player, less height than width.
+// Enemies never spawn under the ground, behind the player, too close to the player
+// or on top of another enemy, and they grow in instead of popping in.
 public class EnemySpawner : MonoBehaviour
 {
     [System.Serializable]
@@ -24,12 +25,22 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private float radius = 9f;
     [SerializeField] private float verticalRadius = 3.5f;
     [SerializeField] private float minSpawnHeight = 2f;
+    [Tooltip("Minimum distance between a new enemy and any enemy that is already alive")]
     [SerializeField] private float minSeparation = 3.5f;
+
+    [Header("Player Safety")]
+    [Tooltip("Keep this above the enemies' detection range so they don't spawn already chasing")]
+    [SerializeField] private float minDistanceFromPlayer = 8f;
+    [Tooltip("Enemies only spawn at least this far IN FRONT of the player (to the right). Set it a bit beyond the screen edge")]
+    [SerializeField] private float minAheadOfPlayer = 10f;
+    [SerializeField] private int maxAttempts = 40;
+    [SerializeField] private float retryDelay = 0.25f;
 
     [SerializeField] private List<SpawnGroup> spawnGroups;
 
     private Transform playerTransform;
-    private readonly List<Vector3> reservedPositions = new List<Vector3>();
+    private readonly List<Vector3> activeEnemyPositions = new List<Vector3>();
+    private readonly WaitUntil waitForTimeToRun = new WaitUntil(() => !TimeStopManager.IsStopped);
 
     void Start()
     {
@@ -60,54 +71,98 @@ public class EnemySpawner : MonoBehaviour
 
     private IEnumerator SpawnEnemies(SpawnGroup group)
     {
-    for (int i = 0; i < group.enemyCount; i++)
-    {
-        // Don't spawn while time is stopped
-        yield return new WaitUntil(() => !TimeStopManager.IsStopped);
+        for (int i = 0; i < group.enemyCount; i++)
+        {
+            // Wait for a valid spot: not while time is stopped, and not near the player
+            Vector3 spawnPosition;
+            while (true)
+            {
+                yield return waitForTimeToRun;
 
-        Vector3 spawnPosition = PickSpawnPosition(group);
-            reservedPositions.Add(spawnPosition);
+                if (TryPickSpawnPosition(group, out spawnPosition)) break;
+
+                yield return new WaitForSeconds(retryDelay);
+            }
+
             GameObject enemy = group.enemyPool.GetObjectFromPool(spawnPosition);
-            // Prefabs are authored at scale 1; in the level they spawn at 0.15.
-           // enemy.transform.localScale = Vector3.one * 0.15f;
             ApplyTint(enemy, group.tint);
+
+            // Resets the pooled enemy and plays its grow-in animation
+            if (enemy.TryGetComponent(out FlyingEnemy flyingEnemy))
+            {
+                flyingEnemy.Spawn(spawnPosition);
+            }
+
             yield return new WaitForSeconds(group.spawnInterval);
         }
     }
 
-    private Vector3 PickSpawnPosition(SpawnGroup group)
+    // Returns false when no valid position was found (the caller tries again shortly)
+    private bool TryPickSpawnPosition(SpawnGroup group, out Vector3 position)
     {
         Vector3 center = group.spawnCenter.position;
-        // 2.5D game: the circle is XY and the depth matches the ship.
+        // 2.5D game: the ellipse is XY and the depth matches the ship.
         center.z = playerTransform.position.z;
 
-        Vector3 bestCandidate = center;
-        float bestDistance = -1f;
-
-        for (int attempt = 0; attempt < 40; attempt++)
+        // Positions of the enemies alive right now (collected once, not per attempt)
+        activeEnemyPositions.Clear();
+        FlyingEnemy[] enemies = FindObjectsByType<FlyingEnemy>(FindObjectsSortMode.None);
+        for (int i = 0; i < enemies.Length; i++)
         {
-            Vector2 offset = Random.insideUnitCircle;
-            Vector3 candidate = center + new Vector3(offset.x * radius, offset.y * verticalRadius, 0f);
-            // The horizontal radius is large; without this clamp the ellipse crosses the ground.
-            if (candidate.y < minSpawnHeight)
+            if (enemies[i].gameObject.activeInHierarchy)
             {
-                candidate.y = minSpawnHeight;
-            }
-            float nearest = DistanceToNearest(candidate);
-
-            if (nearest > bestDistance)
-            {
-                bestDistance = nearest;
-                bestCandidate = candidate;
-            }
-
-            if (nearest >= minSeparation)
-            {
-                return candidate;
+                activeEnemyPositions.Add(enemies[i].transform.position);
             }
         }
 
-        return bestCandidate;
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            Vector2 offset = Random.insideUnitCircle;
+            Vector3 candidate = center + new Vector3(offset.x * radius, offset.y * verticalRadius, 0f);
+
+            // Never under the ground (discard instead of clamping, so they don't line up)
+            if (candidate.y < minSpawnHeight)
+            {
+                continue;
+            }
+
+            // Never behind the player: only spawn ahead of the ship
+            if (candidate.x < playerTransform.position.x + minAheadOfPlayer)
+            {
+                continue;
+            }
+
+            // Never close to the player
+            if (Vector2.Distance(candidate, playerTransform.position) < minDistanceFromPlayer)
+            {
+                continue;
+            }
+
+            // Never on top of another enemy: skip spots that are too close to one
+            if (DistanceToNearestEnemy(candidate) < minSeparation)
+            {
+                continue;
+            }
+
+            position = candidate;
+            return true;
+        }
+
+        // No valid spot this time
+        position = center;
+        return false;
+    }
+
+    private float DistanceToNearestEnemy(Vector3 candidate)
+    {
+        float nearest = float.MaxValue;
+
+        for (int i = 0; i < activeEnemyPositions.Count; i++)
+        {
+            nearest = Mathf.Min(nearest, Vector3.Distance(candidate, activeEnemyPositions[i]));
+        }
+
+        return nearest;
     }
 
     static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -128,29 +183,6 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    private float DistanceToNearest(Vector3 candidate)
-    {
-        float nearest = float.MaxValue;
-
-        for (int i = 0; i < reservedPositions.Count; i++)
-        {
-            nearest = Mathf.Min(nearest, Vector3.Distance(candidate, reservedPositions[i]));
-        }
-
-        FlyingEnemy[] enemies = FindObjectsByType<FlyingEnemy>();
-        for (int i = 0; i < enemies.Length; i++)
-        {
-            if (!enemies[i].gameObject.activeInHierarchy)
-            {
-                continue;
-            }
-
-            nearest = Mathf.Min(nearest, Vector3.Distance(candidate, enemies[i].transform.position));
-        }
-
-        return nearest;
-    }
-
     private void OnDrawGizmosSelected()
     {
         if (spawnGroups == null)
@@ -158,24 +190,43 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
+        // Spawn ellipses
         Gizmos.color = Color.cyan;
         for (int groupIndex = 0; groupIndex < spawnGroups.Count; groupIndex++)
         {
             Transform center = spawnGroups[groupIndex].spawnCenter;
-            if (center == null)
+            if (center != null)
             {
-                continue;
+                DrawEllipse(center.position, radius, verticalRadius);
             }
+        }
 
-            const int segments = 40;
-            Vector3 previous = center.position + new Vector3(radius, 0f, 0f);
-            for (int i = 1; i <= segments; i++)
-            {
-                float angle = i / (float)segments * Mathf.PI * 2f;
-                Vector3 next = center.position + new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * verticalRadius, 0f);
-                Gizmos.DrawLine(previous, next);
-                previous = next;
-            }
+        if (playerTransform != null)
+        {
+            // Safe zone around the player (visible in Play mode)
+            Gizmos.color = Color.red;
+            DrawEllipse(playerTransform.position, minDistanceFromPlayer, minDistanceFromPlayer);
+
+            // Enemies only spawn to the right of this yellow line
+            Gizmos.color = Color.yellow;
+            float limitX = playerTransform.position.x + minAheadOfPlayer;
+            Vector3 bottom = new Vector3(limitX, playerTransform.position.y - 10f, playerTransform.position.z);
+            Vector3 top = new Vector3(limitX, playerTransform.position.y + 10f, playerTransform.position.z);
+            Gizmos.DrawLine(bottom, top);
+        }
+    }
+
+    private static void DrawEllipse(Vector3 center, float horizontal, float vertical)
+    {
+        const int segments = 40;
+        Vector3 previous = center + new Vector3(horizontal, 0f, 0f);
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = i / (float)segments * Mathf.PI * 2f;
+            Vector3 next = center + new Vector3(Mathf.Cos(angle) * horizontal, Mathf.Sin(angle) * vertical, 0f);
+            Gizmos.DrawLine(previous, next);
+            previous = next;
         }
     }
 }
